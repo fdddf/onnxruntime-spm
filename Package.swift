@@ -54,7 +54,8 @@ if let pod_archive_path = ProcessInfo.processInfo.environment["ORT_POD_LOCAL_PAT
     package.targets.append(
        Target.binaryTarget(name: "onnxruntime",
                            url: "https://github.com/fdddf/onnxruntime-spm/releases/download/1.24.2/pod-archive-onnxruntime-c-1.24.2.zip",
-                           // SHA256 checksum (identical to the upstream microsoft 1.24.2 archive)
-                           checksum: "f7100a992d2a8135168c8afd831e6a58b465349101982aa58b3e11d36e600b54")
+                           // SHA256 of our repackaged archive (upstream 1.24.2 with iOS
+                           // MinimumOSVersion raised to 17.0; see scripts/patch-min-os.sh)
+                           checksum: "d248b991eb55236e275b71d48293d3a0d3adba0e57ed3fd99e909fce14e02ad1")
     )
 }

@@ -17,20 +17,26 @@ on:
         description: "microsoft/onnxruntime-swift-package-manager tag to sync bindings from (blank = same as version)"
         required: false
         type: string
+      min_os:
+        description: "iOS MinimumOSVersion to bake into the framework (must be >= the app's deployment target)"
+        required: false
+        default: "17.0"
+        type: string
 
 permissions:
   contents: write
 
 jobs:
+  # macOS runner required: the repackaging step uses plutil + codesign.
   update:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
 
       - name: Prepare new version
         run: |
-          chmod +x scripts/update.sh
-          scripts/update.sh "${{ inputs.version }}" "${{ inputs.upstream_tag }}"
+          chmod +x scripts/update.sh scripts/patch-min-os.sh
+          scripts/update.sh "${{ inputs.version }}" "${{ inputs.upstream_tag }}" "${{ inputs.min_os }}"
 
       - name: Commit and tag
         run: |

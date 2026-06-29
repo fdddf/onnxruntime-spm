@@ -7,13 +7,18 @@
 # It does NOT commit / tag / publish — see the printed "Next steps" (the GitHub
 # Action does those automatically).
 #
+# It also repackages the xcframework with a raised iOS MinimumOSVersion so App
+# Store upload doesn't fail with ITMS-90208 (see scripts/patch-min-os.sh). This
+# step needs macOS (plutil + codesign).
+#
 # Usage:
-#   scripts/update.sh <ort-version> [upstream-tag]
+#   scripts/update.sh <ort-version> [upstream-tag] [min-os]
 #
 #   <ort-version>   ONNX Runtime version, e.g. 1.25.0
 #                   (used for the pod archive filename and this repo's release tag)
 #   [upstream-tag]  microsoft/onnxruntime-swift-package-manager tag to sync the
 #                   objectivec/ bindings from. Defaults to <ort-version>.
+#   [min-os]        iOS MinimumOSVersion baked into the framework. Defaults to 17.0.
 #
 set -euo pipefail
 
@@ -23,6 +28,9 @@ if [[ -z "$VERSION" ]]; then
   exit 2
 fi
 UPSTREAM_TAG="${2:-$VERSION}"
+# iOS floor baked into the repackaged framework (must be >= the consuming app's
+# deployment target, or App Store upload fails with ITMS-90208).
+MIN_OS="${3:-${MIN_OS:-17.0}}"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
@@ -52,7 +60,16 @@ cp -R "$TMP/upstream/objectivec" objectivec
 cp "$TMP/upstream/LICENSE" LICENSE
 
 echo "==> Downloading ${CDN_URL}"
-curl -fSL --retry 3 -o "$PODZIP" "$CDN_URL"
+curl -fSL --retry 3 -o "$TMP/orig.zip" "$CDN_URL"
+
+echo "==> Patching iOS MinimumOSVersion -> ${MIN_OS} (fixes ITMS-90208)"
+mkdir -p "$TMP/pod"
+( cd "$TMP/pod" && unzip -q "$TMP/orig.zip" )
+"$ROOT/scripts/patch-min-os.sh" "$TMP/pod/onnxruntime.xcframework" "$MIN_OS"
+
+echo "==> Repackaging ${PODZIP}"
+rm -f "$PODZIP"
+( cd "$TMP/pod" && zip -r -X -y -q "$ROOT/$PODZIP" . )
 
 if command -v shasum >/dev/null 2>&1; then
   CHECKSUM="$(shasum -a 256 "$PODZIP" | awk '{print $1}')"
