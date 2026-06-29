@@ -1,0 +1,59 @@
+name: Update ONNX Runtime version
+
+# Manually bump this self-hosted package to a new ONNX Runtime version.
+# Go to the Actions tab → "Update ONNX Runtime version" → Run workflow,
+# enter the version (e.g. 1.25.0), and it will:
+#   sync upstream bindings → download the C pod archive → update Package.swift
+#   → commit + tag → publish a Release with the archive attached.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "ONNX Runtime version (pod archive + release tag), e.g. 1.25.0"
+        required: true
+        type: string
+      upstream_tag:
+        description: "microsoft/onnxruntime-swift-package-manager tag to sync bindings from (blank = same as version)"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare new version
+        run: |
+          chmod +x scripts/update.sh
+          scripts/update.sh "${{ inputs.version }}" "${{ inputs.upstream_tag }}"
+
+      - name: Commit and tag
+        run: |
+          VERSION="${{ inputs.version }}"
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # The pod archive zip is gitignored, so it won't be committed.
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No source changes (bindings/Package.swift already up to date)."
+          else
+            git commit -m "ONNX Runtime ${VERSION}"
+            git push origin HEAD
+          fi
+          git tag "${VERSION}"
+          git push origin "${VERSION}"
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${{ inputs.version }}"
+          PODZIP="pod-archive-onnxruntime-c-${VERSION}.zip"
+          gh release create "${VERSION}" "${PODZIP}" \
+            --title "${VERSION}" \
+            --notes "ONNX Runtime C pod archive ${VERSION}, re-hosted from download.onnxruntime.ai."
