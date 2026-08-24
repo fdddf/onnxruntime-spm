@@ -5,7 +5,8 @@
 # The upstream pod archive ships the iOS frameworks with MinimumOSVersion 15.1.
 # App Store validation rejects an app (ITMS-90208) when an embedded framework
 # declares a LOWER MinimumOSVersion than the app itself. PhotoRepair's deployment
-# target is 17.0, so we bump every iOS slice to match.
+# target is 17.0, so we bump every iOS slice to match. Upstream issue:
+# https://github.com/microsoft/onnxruntime/issues/27396 (closed as stale, unfixed).
 #
 # The framework's "binary" is a static library archive (the SPM product is
 # `type: .static`, so ONNX is linked into the app), not a Mach-O dylib — there is

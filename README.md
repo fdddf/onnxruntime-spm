@@ -16,7 +16,16 @@ at tag `1.24.2`, with two changes:
    (the app's deployment target). App Store validation rejects an app with
    **ITMS-90208** when an embedded framework declares a lower `MinimumOSVersion`
    than the app. See `scripts/patch-min-os.sh`. (Bump this if the app's deployment
-   target ever goes above 17.0.)
+   target ever goes above 17.0 — or, in the consuming app, patch the copied
+   framework from a Run Script phase using `${IPHONEOS_DEPLOYMENT_TARGET}`, which
+   is what TextReader does at 18.0.)
+
+Upstream tracking issue: [microsoft/onnxruntime#27396][issue] (closed as stale,
+still unfixed). It also reports ITMS-90530 and ITMS-90360 — those come from
+`onnxruntime_extensions.framework`, which ships *no* `MinimumOSVersion` key at
+all; this mirror drops that target, so only the 15.1 above applies here.
+
+[issue]: https://github.com/microsoft/onnxruntime/issues/27396
 
 The Objective-C bindings source and the C binary are unmodified Microsoft artifacts,
 distributed under the MIT License (see `LICENSE`).
